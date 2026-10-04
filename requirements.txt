@@ -1,0 +1,10 @@
+# Python 3.9 gerekir (dronekit 2.9.2 yeni Python sürümlerinde çalışmaz)
+PyQt5==5.15.11
+PyQtWebEngine==5.15.7
+dronekit==2.9.2
+pymavlink==2.4.49
+opencv-python==4.13.0.92
+numpy==2.0.2
+requests==2.32.5
+# sadece yerel test sunucusu (test_server.py) için
+flask==3.1.3

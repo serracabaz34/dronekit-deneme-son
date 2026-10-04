@@ -1,0 +1,116 @@
+backend sayfasında yapılkacak güncellemeler:
+
+
+class CameraThread(QThread):
+    frame_ready = pyqtSignal(QImage)
+    recording_finished = pyqtSignal(str)
+    status = pyqtSignal(str)
+
+    def __init__(self, stream_url="udp://0.0.0.0:5600"):
+        super().__init__()
+        self.stream_url = stream_url
+        self.running = True
+        self.is_recording = False
+        self.writer = None
+        self.mp4_path = None
+        self.record_fps = 25
+        self.frame_size = (640, 480)
+
+    def run(self):
+        # UDP GStreamer/FFmpeg alıcısı
+        # OpenCV arka planda harici ffmpeg.exe olmadan ağ yayınını çözer
+        cap = cv2.VideoCapture(self.stream_url, cv2.CAP_FFMPEG)
+
+        if not cap.isOpened():
+            self.status.emit(f"Ağ yayınına bağlanılamadı: {self.stream_url}")
+            return
+
+        self.status.emit("Jetson canlı yayını bağlandı.")
+
+        while self.running:
+            ret, frame = cap.read()
+            if not ret:
+                self.msleep(10)
+                continue
+
+            # Kayıt aktifse doğrudan MP4 olarak yaz (FFmpeg bağımlılığı olmadan)
+            if self.is_recording and self.writer is not None:
+                try:
+                    self.writer.write(cv2.resize(frame, self.frame_size))
+                except Exception as e:
+                    self.status.emit(f"Kayıt yazma hatası: {e}")
+
+            # Arayüze görüntüyü bas
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb.shape
+            qimg = QImage(rgb.data, w, h, ch * w, QImage.Format_RGB888).copy()
+            self.frame_ready.emit(qimg)
+
+            self.msleep(20)
+
+        cap.release()
+        self._stop_writer()
+
+    def start_recording(self, base_name="latest", out_dir="records"):
+        if self.is_recording:
+            return
+
+        Path(out_dir).mkdir(parents=True, exist_ok=True)
+        tarih_str = datetime.now().strftime("%d_%m_%Y")
+        formatted_name = f"18_AZAK_SIHA_DGM_TAKIMI_{tarih_str}"
+        self.mp4_path = str(Path(out_dir) / f"{formatted_name}.mp4")
+
+        # Harici FFmpeg ihtiyaç duymadan doğrudan MP4 formatında yazıcı başlat
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        self.writer = cv2.VideoWriter(self.mp4_path, fourcc, self.record_fps, self.frame_size)
+
+        if not self.writer.isOpened():
+            self.writer = None
+            self.status.emit("VideoWriter açılamadı.")
+            return
+
+        self.is_recording = True
+        self.status.emit(f"Kayıt başladı: {self.mp4_path}")
+
+    def stop_recording(self):
+        if not self.is_recording:
+            return
+
+        self.is_recording = False
+        self._stop_writer()
+        self.status.emit(f"MP4 kaydı tamamlandı: {self.mp4_path}")
+        self.recording_finished.emit(self.mp4_path)
+
+    def _stop_writer(self):
+        if self.writer is not None:
+            try:
+                self.writer.release()
+            except Exception:
+                pass
+            self.writer = None
+
+    def stop(self):
+        self.running = False
+        self.wait()
+
+
+
+
+
+
+
+
+
+
+# --- ESKİ KOD (KALDIRILACAK) ---
+# ffmpeg_path = r"C:\ffmpeg\ffmpeg-8.0.1-full_build\bin\ffmpeg.exe"
+# self.cam = CameraThread(cam_index=0, ffmpeg_path=ffmpeg_path)
+
+# --- YENİ KOD ---
+# 5600 portundan gelen UDP yayınını dinle
+STREAM_URL = "udp://0.0.0.0:5600?overrun_nonfatal=1&fifo_size=5000000"
+self.cam = CameraThread(stream_url=STREAM_URL)
+self.cam.frame_ready.connect(self.on_camera_frame, Qt.UniqueConnection)
+self.cam.status.connect(lambda m: print("[CAM]", m))
+self.cam.recording_finished.connect(self.on_recording_finished)
+self.cam.start()

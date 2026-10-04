@@ -1,0 +1,34 @@
+# Tehdit alanı
+
+THREAT_RADIUS = 200.0
+
+
+# Durum eşikleri
+
+NORMAL_THRESHOLD = 30.0
+THREAT_THRESHOLD = 60.0
+ESCAPE_THRESHOLD = 80.0
+
+
+# Tehdit skor ağırlıkları
+
+W_DISTANCE = 0.30
+W_SPEED = 0.25
+W_HEADING = 0.15
+W_TTC = 0.20
+W_TIME = 0.10
+
+
+# Kaçış parametreleri
+
+SAFE_ESCAPE_DISTANCE = 150.0
+
+MIN_TURN_RADIUS = 40.0
+
+THREAT_RADIUS = 200.0
+
+MAX_REL_SPEED = 50.0
+
+MAX_THREAT_TIME = 20.0
+
+MAX_TTC = 30.0

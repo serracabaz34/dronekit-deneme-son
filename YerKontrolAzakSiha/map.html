@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Harita</title>
+
+<!-- 🔥 CDN LEAFLET (EN STABİL) -->
+<link rel="stylesheet" href="./leaflet.css"/>
+<script src="./leaflet.js"></script>
+
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+}
+#map {
+    width: 100%;
+    height: 100%;
+}
+.rotated-icon {
+    transform-origin: center;
+}
+</style>
+
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+
+/* 🔥 JS HATALARINI YAKALA (CRASH ÖNLEME) */
+window.onerror = function(msg) {
+    console.log("JS ERROR:", msg);
+};
+
+/* 🔥 HARİTA BAŞLAT */
+// var map = L.map('map').setView([40.843, 31.156], 15);
+var map = L.map('map', {
+    zoomControl: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    boxZoom: true,
+    dragging: true
+}).setView([40.843, 31.156], 15);
+
+var userMovedMap = false;
+
+map.on('dragstart zoomstart', function() {
+    userMovedMap = true;
+});
+
+map.options.autoPan = false;
+
+L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+    attribution: 'OSM'
+}).addTo(map);
+
+/* 🟢 BİZİM UÇAK */
+var myPlane = null;
+var firstUpdate = true;
+
+var planeIcon = L.icon({
+    iconUrl: 'bizim_iha.png',
+    iconSize: [60, 60],
+    iconAnchor: [30, 30],
+    className: "rotated-icon"
+});
+
+function updatePlane(lat, lon, heading) {
+    try {
+        if (!lat || !lon) return;
+
+        if (!myPlane) {
+            myPlane = L.marker([lat, lon], {icon: planeIcon})
+                .addTo(map)
+                .bindPopup("Bizim İHA");
+        } else {
+            myPlane.setLatLng([lat, lon]);
+        }
+
+        myPlane.setZIndexOffset(1000);
+
+        // 🔥 ROTATE EKLE
+        if (heading !== undefined) {
+            const el = myPlane.getElement();
+            if (el) {
+                el.style.transform += `rotate(${heading}deg)`
+            }
+        }
+
+        if (firstUpdate && !userMovedMap) {
+            map.setView([lat, lon], 17);
+            firstUpdate = false;
+        }
+
+    } catch (e) {
+        console.log("updatePlane error:", e);
+    }
+}
+
+/* RAKİPLER */
+var enemies = {};
+
+function updateEnemies(targets) {
+    try {
+        if (!targets || !Array.isArray(targets)) return;
+
+        targets.forEach(t => {
+            if (!t.lat || !t.lon) return;
+
+            if (!enemies[t.id]) {
+                enemies[t.id] = L.circleMarker([t.lat, t.lon], {
+                    radius: 5,
+                    color: "red",
+                    fillColor: "red",
+                    fillOpacity: 1
+                }).addTo(map).bindPopup("Rakip " + t.id);
+            } else {
+                enemies[t.id].setLatLng([t.lat, t.lon]);
+            }
+        });
+
+        // ESKİLERİ SİL
+        Object.keys(enemies).forEach(id => {
+            if (!targets.find(t => t.id === id)) {
+                map.removeLayer(enemies[id]);
+                delete enemies[id];
+            }
+        });
+
+    } catch (e) {
+        console.log("updateEnemies error:", e);
+    }
+}
+
+/* DEBUG */
+console.log("Leaflet loaded:", typeof L);
+
+
+/* 🔴 BOUNDARY / SINIR ALANI */
+var boundaryLayer = null;
+
+function drawBoundaryPolygon(coords) {
+    console.log("drawBoundaryPolygon çağrıldı! Gelen veri:", coords);
+    try {
+        if (!map) {
+            console.error("Harita objesi (map) henüz hazır değil!");
+            return;
+        }
+
+        if (boundaryLayer) {
+            map.removeLayer(boundaryLayer);
+        }
+
+        // Kırmızı kalın çerçeve çizimi
+        boundaryLayer = L.polygon(coords, {
+            color: 'red',
+            weight: 5,
+            fill: false
+        }).addTo(map);
+
+        // Haritayı çizilen alana odakla
+        console.log("Boundary başarıyla haritaya eklendi.");
+
+    } catch (e) {
+        console.error("drawBoundaryPolygon hatası:", e);
+    }
+}
+
+
+/* 🔴 BOUNDARY / SINIR ALANI */
+var boundaryLayer = null;
+
+/* 🟡 HSS / SİNYAL KARIŞTIRMA ALANLARI */
+var hssDaireleri = []; // <-- BU SATIRI EKLEYİN
+
+function updateHSSAreas(hssList) {
+    clearHSSAreas();
+
+    if (hssList && Array.isArray(hssList) && hssList.length > 0) {
+        var bounds = [];
+
+        hssList.forEach(function(hss) {
+            var lat = parseFloat(hss.hssEnlem);
+            var lng = parseFloat(hss.hssBoylam);
+
+            var circle = L.circle([lat, lng], {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.4,
+                radius: hss.hssYaricap
+            }).addTo(map);
+
+            circle.bindPopup("<b>HSS / Sinyal Karıştırma Alanı</b><br>ID: " + hss.id + "<br>Yarıçap: " + hss.hssYaricap + "m");
+            hssDaireleri.push(circle);
+            bounds.push([lat, lng]);
+        });
+
+    }
+}
+
+function clearHSSAreas() {
+    for (var i = 0; i < hssDaireleri.length; i++) {
+        map.removeLayer(hssDaireleri[i]);
+    }
+    hssDaireleri = [];
+}
+
+</script>
+
+</body>
+</html>

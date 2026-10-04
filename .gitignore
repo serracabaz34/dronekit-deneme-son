@@ -1,0 +1,17 @@
+# Sanal ortam ve IDE
+venv39/
+venv/
+.venv/
+.idea/
+__pycache__/
+*.pyc
+
+# Üretilen kayıtlar ve loglar
+records/
+server_records/
+crash_log.txt
+*.avi
+*.mp4
+
+# Yarışma sunucusu kullanıcı adı/şifresi içeren betik: depoya girmez
+sunucu_takim_no_bilgisi.py

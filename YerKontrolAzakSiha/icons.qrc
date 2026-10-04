@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="icons">
+    <file>icons/AZAKSIHA.jpeg</file>
+    <file>icons/iconSiha.jpeg</file>
+    <file>icons/iconyeni.png</file>
+    <file>icons/azakSihaIcon.png</file>
+  </qresource>
+</RCC>
